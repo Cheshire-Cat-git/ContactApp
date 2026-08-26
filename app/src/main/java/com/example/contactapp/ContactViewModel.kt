@@ -1,35 +1,19 @@
 package com.example.contactapp
 
-import android.Manifest.permission.READ_CONTACTS
-import android.os.Bundle
+import android.app.Application
 import android.provider.ContactsContract
-import android.view.View
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.lifecycle.AndroidViewModel
 import com.example.contactapp.data.Contact
-import com.example.contactapp.data.ContactAdapter
-import com.example.contactapp.databinding.FragmentContactListBinding
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
-class ContactListFragment : Fragment(R.layout.fragment_contact_list) {
-    private var _binding: FragmentContactListBinding? = null
-    private val binding get() = _binding!!
+class ContactViewModel(application: Application): AndroidViewModel(application) {
+    private val _contacts = MutableStateFlow<List<Contact>>(emptyList())
+    val contacts: StateFlow<List<Contact>> = _contacts
 
-    private val requestPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) loadContacts()
-        }
+    fun loadContacts() {
+        val contentResolver = getApplication<Application>().contentResolver
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        _binding = FragmentContactListBinding.bind(view)
-        requestPermissionLauncher.launch(READ_CONTACTS)
-    }
-
-    private fun loadContacts() {
-        val contactList = mutableListOf<Contact>()
-        val contentResolver = requireContext().contentResolver
-        
         val cursor = contentResolver.query(
             ContactsContract.Data.CONTENT_URI,
             null,
@@ -56,7 +40,7 @@ class ContactListFragment : Fragment(R.layout.fragment_contact_list) {
             while (it.moveToNext()) {
                 val id = it.getLong(idIndex)
                 val mimeType = it.getString(mimeIndex)
-                
+
                 val contact = contactsMap.getOrPut(id) {
                     Contact(
                         name = it.getString(nameIndex) ?: "Unknown",
@@ -79,28 +63,7 @@ class ContactListFragment : Fragment(R.layout.fragment_contact_list) {
                     }
                 }
             }
-            contactList.addAll(contactsMap.values)
+            _contacts.value = contactsMap.values.toList()
         }
-
-        binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        binding.recyclerView.adapter = ContactAdapter(contactList) { contact ->
-            val detailFragment = ContactDetailFragment.newInstance(
-                contact.name,
-                contact.phoneNumber,
-                contact.photoUri,
-                contact.email,
-                contact.address
-            )
-            
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, detailFragment)
-                .addToBackStack(null)
-                .commit()
-        }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }

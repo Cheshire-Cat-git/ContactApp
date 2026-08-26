@@ -1,73 +1,99 @@
 package com.example.contactapp
 
 import android.content.Intent
-import android.os.Bundle
-import android.view.View
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import androidx.fragment.app.Fragment
-import com.example.contactapp.databinding.FragmentContactDetailBinding
+import coil.compose.AsyncImage
+import com.example.contactapp.data.Contact
 
-class ContactDetailFragment : Fragment(R.layout.fragment_contact_detail) {
-    private var _binding: FragmentContactDetailBinding? = null
-    private val binding get() = _binding!!
+@Composable
+fun ContactDetailScreen(
+    contact: Contact,
+    onBackClick: () -> Unit
+) {
+    val context = LocalContext.current
 
-    companion object {
-        private const val ARG_NAME = "arg_name"
-        private const val ARG_PHONE = "arg_phone"
-        private const val ARG_PHOTO = "arg_photo"
-        private const val ARG_EMAIL = "arg_email"
-        private const val ARG_ADDRESS = "arg_address"
-
-        fun newInstance(name: String, phone: String, photoUri: String?, email: String?, address: String?) =
-            ContactDetailFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_NAME, name)
-                    putString(ARG_PHONE, phone)
-                    putString(ARG_PHOTO, photoUri)
-                    putString(ARG_EMAIL, email)
-                    putString(ARG_ADDRESS, address)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBackClick) {
+                Icon(painter = painterResource(android.R.drawable.ic_menu_revert), contentDescription = "Back")
+            }
+            Text(
+                text = "Contact App",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF2A2238),
+                modifier = Modifier.padding(start = 20.dp)
+            )
+        }
+        AsyncImage(
+            model = contact.photoUri ?: R.drawable.ic_launcher_background,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .padding(top = 20.dp),
+            contentScale = ContentScale.Crop
+        )
+        Text(
+            text = contact.name,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF3D324E),
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, bottom = 24.dp)
+        )
+        Text("Phone Numbers:", fontWeight = FontWeight.Bold, color = Color(0xFF4A3F5E))
+        Text(
+            text = contact.phoneNumber,
+            color = Color(0xFF5C536B),
+            fontSize = 15.sp,
+            modifier = Modifier
+                .padding(top = 6.dp, start = 16.dp)
+                .clickable {
+                    if (contact.phoneNumber.isNotEmpty()) {
+                        val intent = Intent(Intent.ACTION_DIAL, "tel:${contact.phoneNumber}".toUri())
+                        context.startActivity(intent)
+                    }
                 }
-            }
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        _binding = FragmentContactDetailBinding.bind(view)
-
-        val name = arguments?.getString(ARG_NAME) ?: ""
-        val phone = arguments?.getString(ARG_PHONE) ?: ""
-        val photoUri = arguments?.getString(ARG_PHOTO)
-
-        binding.tvDetailName.text = name
-        binding.tvDetailPhone.text = phone
-        
-        if (photoUri != null) {
-            binding.ivDetailPhoto.setImageURI(photoUri.toUri())
-        } else {
-            binding.ivDetailPhoto.setImageResource(R.drawable.ic_profile_blank)
-        }
-        listOf(binding.tvDetailPhone, binding.tvPhoneHome, binding.tvPhoneWork).forEach { textView ->
-            textView.setOnClickListener { 
-                val number = textView.text.toString()
-                if (number.isNotEmpty()) dialPhoneNumber(number)
-            }
+        )
+        contact.email?.let { email ->
+            Text("Emails:", fontWeight = FontWeight.Bold, color = Color(0xFF4A3F5E), modifier = Modifier.padding(top = 16.dp))
+            Text(text = email, color = Color(0xFF5C536B), fontSize = 15.sp, modifier = Modifier.padding(top = 6.dp, start = 16.dp))
         }
 
-        binding.btnBack.setOnClickListener {
-            parentFragmentManager.popBackStack()
+        contact.address?.let { address ->
+            Text("Addresses:", fontWeight = FontWeight.Bold, color = Color(0xFF4A3F5E), modifier = Modifier.padding(top = 16.dp))
+            Text(text = address, color = Color(0xFF5C536B), fontSize = 15.sp, modifier = Modifier.padding(top = 6.dp, start = 16.dp))
         }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-    }
-
-    private fun dialPhoneNumber(phoneNumber: String?) {
-        if (phoneNumber.isNullOrBlank()) return
-        val intent = Intent(Intent.ACTION_DIAL).apply {
-            data = "tel:$phoneNumber".toUri()
-        }
-        startActivity(intent)
     }
 }
